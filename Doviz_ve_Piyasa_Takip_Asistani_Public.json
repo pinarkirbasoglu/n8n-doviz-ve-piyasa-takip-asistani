@@ -1,0 +1,274 @@
+{
+  "name": "Doviz_ve_Piyasa_Takip_Asistani_Public",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1040,
+        96
+      ],
+      "id": "11111111-1111-1111-1111-111111111101",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://open.er-api.com/v6/latest/TRY",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -832,
+        96
+      ],
+      "id": "11111111-1111-1111-1111-111111111102",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const apiVerisi = $input.first().json;\n\n// API 1 TL karşılığını verdiği için 1'e bölerek gerçek Dolar/TL ve Euro/TL kurunu buluyoruz\nconst dolarTL = 1 / apiVerisi.rates.USD;\nconst euroTL = 1 / apiVerisi.rates.EUR;\n\n// Bugünün tarihini YYYY-AA-GG formatında alıyoruz\nconst bugun = new Date().toISOString().split('T')[0];\n\n// Ayrı Kritik Eşik Değerleri\nconst dolarKritikEsik = 50.00;\nconst euroKritikEsik = 55.00;\n\n// Dolar ve Euro için ayrı ayrı eşik kontrolü\nconst dolarDurum = dolarTL >= dolarKritikEsik ? 'KRİTİK SEVİYE' : 'NORMAL';\nconst euroDurum = euroTL >= euroKritikEsik ? 'KRİTİK SEVİYE' : 'NORMAL';\n\n// En az biri kritik eşiği aştıysa genel durum KRİTİK SEVİYE olur\nconst genelDurum = (dolarDurum === 'KRİTİK SEVİYE' || euroDurum === 'KRİTİK SEVİYE') \n  ? 'KRİTİK SEVİYE' \n  : 'NORMAL';\n\nreturn [\n  {\n    json: {\n      Tarih: bugun,\n      Dolar_TL: Number(dolarTL.toFixed(4)),\n      Euro_TL: Number(euroTL.toFixed(4)),\n      Dolar_Durum: dolarDurum,\n      Euro_Durum: euroDurum,\n      Genel_Durum: genelDurum\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        96
+      ],
+      "id": "11111111-1111-1111-1111-111111111103",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "Doviz_Kurlari"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Tarih",
+              "displayName": "Tarih",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Dolar_TL",
+              "displayName": "Dolar_TL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Euro_TL",
+              "displayName": "Euro_TL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Dolar_Durum",
+              "displayName": "Dolar_Durum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Euro_Durum",
+              "displayName": "Euro_Durum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Genel_Durum",
+              "displayName": "Genel_Durum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -416,
+        96
+      ],
+      "id": "11111111-1111-1111-1111-111111111104",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "11111111-1111-1111-1111-111111111109",
+              "leftValue": "={{ $json.Genel_Durum }}",
+              "rightValue": "KRİTİK SEVİYE",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -208,
+        96
+      ],
+      "id": "11111111-1111-1111-1111-111111111105",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "fromEmail": "gonderici@ornek.com",
+        "toEmail": "yonetici@ornek.com",
+        "subject": "=ACİL PİYASA UYARISI: Döviz Kuru Kritik Eşiği Aştı! ({{ $json.Tarih }})",
+        "emailFormat": "text",
+        "text": "=Merhaba,\n\n{{ $json.Tarih }} tarihli otomatik piyasa kontrolünde kritik kur eşikleri aşılmıştır:\n\nDolar/TL: {{ $json.Dolar_TL }} TL (Durum: {{ $json.Dolar_Durum }} | Eşik: 50.00 TL)\nEuro/TL: {{ $json.Euro_TL }} TL (Durum: {{ $json.Euro_Durum }} | Eşik: 55.00 TL)\n\nGenel Piyasa Statüsü: {{ $json.Genel_Durum }}\n\nBilgilerinize sunarız.\nOtomatik Döviz ve Piyasa Takip Asistanı",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "11111111-1111-1111-1111-111111111106",
+      "name": "Send an Email"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        192
+      ],
+      "id": "11111111-1111-1111-1111-111111111107",
+      "name": "No Operation, do nothing"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "tags": []
+}
